@@ -2,11 +2,17 @@ import SwiftUI
 import WidgetKit
 
 public struct WeatherWidgetView: View {
-    @Environment(\.widgetFamily) var family
-    let entry: WeatherEntry
+    @Environment(\.widgetFamily) var systemFamily
+    public let entry: WeatherEntry
+    public let customFamily: WidgetFamily?
     
-    public init(entry: WeatherEntry) {
+    public init(entry: WeatherEntry, family: WidgetFamily? = nil) {
         self.entry = entry
+        self.customFamily = family
+    }
+    
+    private var effectiveFamily: WidgetFamily {
+        customFamily ?? systemFamily
     }
     
     public var body: some View {
@@ -19,7 +25,7 @@ public struct WeatherWidgetView: View {
                         .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
                 )
             
-            switch family {
+            switch effectiveFamily {
             case .systemSmall:
                 SmallWeatherLayout(weather: entry.weather)
             default:

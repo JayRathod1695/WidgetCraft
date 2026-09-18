@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Represents a reusable theme for widgets
-public struct WidgetTheme: Identifiable, Equatable {
+public struct WidgetTheme: Identifiable, Equatable, Sendable {
     public let id = UUID()
     public let name: String
     public let background: Color
@@ -11,6 +11,7 @@ public struct WidgetTheme: Identifiable, Equatable {
 }
 
 /// Defines the top aesthetic theme combinations for WidgetCraft
+@MainActor
 public struct ThemeLibrary {
     public static let themes: [WidgetTheme] = [
         WidgetTheme(name: "Midnight", background: Color.black, primary: Color.white, secondary: Color.gray, accent: Color.blue),

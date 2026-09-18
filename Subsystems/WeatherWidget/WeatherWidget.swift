@@ -13,8 +13,5 @@ public struct WeatherWidget: Widget {
         .configurationDisplayName("Glance Weather")
         .description("Clean, glanceable weather overview with hourly forecast.")
         .supportedFamilies([.systemSmall, .systemMedium])
-        #if os(macOS)
-        .disfavoredLocations([.standBy], for: [.systemSmall, .systemMedium])
-        #endif
     }
 }
