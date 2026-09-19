@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WidgetCraft - Element-Luminescent Liquid Glass Widget</title>
+<title>WidgetCraft - 24-Hour Timeline Simulator</title>
 <style>
   :root {
     --bg-dark: #07090e;
@@ -11,7 +11,7 @@
     --text-secondary: rgba(255, 255, 255, 0.72);
     --text-tertiary: rgba(255, 255, 255, 0.38);
     
-    /* Clean, Neutral Glass Surfaces (ZERO colored borders) */
+    /* Clean, Neutral Glass Surfaces (Apple HIG) */
     --glass-card-bg: rgba(255, 255, 255, 0.05);
     --glass-cell-bg: rgba(255, 255, 255, 0.04);
     --glass-border-hairline: 1px solid rgba(255, 255, 255, 0.12);
@@ -30,54 +30,51 @@
     justify-content: center;
     padding: 30px 20px;
     overflow-x: hidden;
+    user-select: none;
   }
 
-  /* Preset Selector */
-  .switch-bar {
+  /* Container holding Widget + Vertical Bar */
+  .preview-wrapper {
     display: flex;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border: var(--glass-border-hairline);
-    padding: 6px 12px;
-    border-radius: 999px;
-    margin-bottom: 24px;
-    backdrop-filter: blur(25px);
-  }
-  .switch-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    padding: 6px 18px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  .switch-btn.active {
-    background: rgba(255, 255, 255, 0.16);
-    color: #fff;
+    align-items: stretch;
+    justify-content: center;
+    gap: 24px;
+    max-width: 1020px;
+    width: 100%;
   }
 
   /* ------------------------------------------------------------- */
-  /* MASTER SOLID WIDGET: CLEAN FROSTED GLASS (NO GLOWING BORDER)   */
+  /* MASTER SOLID WIDGET: STRICT LOCKED GEOMETRY (ZERO JITTER)      */
   /* ------------------------------------------------------------- */
   .master-widget {
     position: relative;
-    width: 700px;
+    width: 720px;
+    height: 520px;
+    min-height: 520px;
+    max-height: 520px;
     border-radius: 42px;
     background: var(--glass-card-bg);
     backdrop-filter: blur(60px) saturate(210%);
     -webkit-backdrop-filter: blur(60px) saturate(210%);
-    padding: 30px 34px;
+    padding: 32px 36px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    justify-content: space-between;
     border: var(--glass-border-hairline);
     box-shadow: 
       0 30px 80px rgba(0, 0, 0, 0.8),
       inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
     overflow: hidden;
+    transition: background 0.4s ease;
+  }
+
+  /* Dynamic Sky Glass Tint based on time */
+  .sky-tint-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: background 0.6s ease;
+    z-index: 1;
   }
 
   /* Glass Specular Top Sheen */
@@ -89,6 +86,7 @@
     height: 40%;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 100%);
     pointer-events: none;
+    z-index: 2;
   }
 
   /* Header */
@@ -96,7 +94,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    z-index: 2;
+    z-index: 3;
+    height: 28px;
   }
   .loc-badge {
     display: flex;
@@ -107,8 +106,8 @@
     width: 14px;
     height: 14px;
     fill: #00e5ff;
-    /* Element glow */
     filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.7));
+    flex-shrink: 0;
   }
   .loc-name {
     font-size: 13px;
@@ -116,8 +115,28 @@
     letter-spacing: 1.2px;
     text-transform: uppercase;
     color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .live-indicator {
+  .status-cluster {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .time-badge {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 3px 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: var(--glass-border-hairline);
+    border-radius: 999px;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .sim-tag {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -129,12 +148,11 @@
     font-weight: 700;
     color: #30d158;
   }
-  .live-dot {
+  .sim-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: #30d158;
-    /* Element glow */
     box-shadow: 0 0 8px #30d158;
     animation: pulse 2s infinite;
   }
@@ -145,30 +163,45 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    z-index: 2;
+    z-index: 3;
+    height: 96px;
+  }
+  .hero-left-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 480px;
   }
   .temp-large {
     font-size: 68px;
     font-weight: 200;
     line-height: 0.95;
     letter-spacing: -2px;
-    /* Element Luminous Glow */
     text-shadow: 0 0 25px rgba(255, 255, 255, 0.35);
+    transition: color 0.3s ease;
   }
   .condition-text {
     font-size: 16px;
     font-weight: 600;
-    margin-top: 6px;
+    margin-top: 4px;
     color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
   }
   .hilo-text {
     font-size: 12px;
     font-weight: 500;
     color: var(--text-secondary);
-    margin-top: 4px;
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
   }
 
-  /* Vector Visual Scene */
+  /* Vector Weather Scene (Sun / Moon / Cloud) */
   .hero-vector-scene {
     position: relative;
     width: 96px;
@@ -176,71 +209,89 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
   .sun-body {
-    width: 64px;
-    height: 64px;
-    /* Element Luminous Glow */
-    filter: drop-shadow(0 0 16px rgba(255, 170, 0, 0.85));
-    animation: spinRays 28s linear infinite;
+    position: absolute;
+    width: 68px;
+    height: 68px;
+    filter: drop-shadow(0 0 18px rgba(255, 170, 0, 0.85));
+    animation: spinRays 32s linear infinite;
+    transition: opacity 0.5s ease, transform 0.5s ease;
   }
   @keyframes spinRays { 100% { transform: rotate(360deg); } }
+
+  .moon-body {
+    position: absolute;
+    width: 62px;
+    height: 62px;
+    filter: drop-shadow(0 0 16px rgba(130, 180, 255, 0.85));
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
   .cloud-body {
     position: absolute;
-    bottom: 2px;
+    bottom: 0px;
     right: -6px;
-    width: 72px;
-    height: 44px;
+    width: 74px;
+    height: 46px;
     filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
     animation: floatCloud 4.5s ease-in-out infinite alternate;
   }
   @keyframes floatCloud { 0% { transform: translateY(0); } 100% { transform: translateY(-4px); } }
 
-  /* Hourly Shelf */
+  /* Hourly Shelf (Fixed Height) */
   .hourly-shelf {
     display: flex;
     justify-content: space-between;
     background: var(--glass-cell-bg);
     border: var(--glass-border-hairline);
     border-radius: 22px;
-    padding: 12px 20px;
-    z-index: 2;
+    padding: 10px 20px;
+    z-index: 3;
+    height: 72px;
+    min-height: 72px;
+    max-height: 72px;
+    align-items: center;
   }
   .hour-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
+    width: 50px;
   }
-  .hour-time { font-size: 11px; color: var(--text-tertiary); font-weight: 500; }
-  .hour-deg { font-size: 13px; font-weight: 600; }
+  .hour-time { font-size: 11px; color: var(--text-tertiary); font-weight: 500; line-height: 1; }
+  .hour-deg { font-size: 13px; font-weight: 600; line-height: 1; }
   .hour-icon { 
     width: 18px; 
     height: 18px; 
-    /* Subtle element glow */
     filter: drop-shadow(0 0 4px rgba(255, 180, 0, 0.6));
+    flex-shrink: 0;
   }
 
-  /* ------------------------------------------------------------- */
-  /* THE 4 INTEGRATED CAPSULES: CLEAN GLASS WITH GLOWING ELEMENTS   */
-  /* ------------------------------------------------------------- */
+  /* Gauges Grid (Strict Locked Height Capsules) */
   .gauges-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 14px;
-    z-index: 2;
+    z-index: 3;
+    height: 120px;
+    min-height: 120px;
+    max-height: 120px;
   }
 
   .clean-capsule {
     position: relative;
     background: var(--glass-cell-bg);
-    /* Strict Neutral Hairline - ZERO colored borders */
     border: var(--glass-border-hairline);
     border-radius: 24px;
-    padding: 14px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    height: 120px;
+    min-height: 120px;
+    max-height: 120px;
     overflow: hidden;
     transition: background 0.2s ease;
   }
@@ -257,6 +308,7 @@
     letter-spacing: 0.8px;
     text-transform: uppercase;
     color: var(--text-tertiary);
+    height: 18px;
   }
   .capsule-tag {
     font-size: 9px;
@@ -264,36 +316,45 @@
     padding: 2px 6px;
     border-radius: 6px;
     letter-spacing: 0.5px;
+    white-space: nowrap;
+    line-height: 1;
   }
 
   .capsule-primary-val {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 300;
-    margin: 4px 0 2px;
     letter-spacing: -0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.1;
   }
   .capsule-subtext {
     font-size: 10px;
     color: var(--text-secondary);
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
   }
 
-  /* 1. UV Index: Element Glow on Core Dot & Slider */
+  /* 1. UV Index Spectrum */
   .uvi-spectrum-capsule {
     position: relative;
     width: 100%;
-    height: 14px;
+    height: 12px;
     border-radius: 999px;
     background: linear-gradient(90deg, #30d158 0%, #ffd60a 35%, #ff9f0a 65%, #ff453a 90%, #bf5af2 100%);
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7);
-    margin-top: 8px;
+    margin-top: 4px;
     overflow: visible;
   }
   .glass-3d-runner {
     position: absolute;
-    top: -4px;
-    left: 48%;
-    width: 28px;
+    top: -5px;
+    left: 50%;
+    width: 26px;
     height: 22px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.25);
@@ -302,66 +363,96 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    /* NO laggy transition during continuous scrubbing */
   }
-  /* Glowing inner core */
   .runner-center-core {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background: #ffffff;
     box-shadow: 0 0 10px #ffffff, 0 0 16px #ffcc00;
   }
 
-  /* 2. Solar Arc: Element Glow on Path & Sun Pearl */
+  /* 2. Solar Arc (Native SVG Geometry) */
   .solar-arc-svg {
     width: 100%;
-    height: 32px;
-    margin-top: 4px;
+    height: 28px;
+    margin-top: 2px;
     overflow: visible;
   }
   .active-arc-line {
-    filter: drop-shadow(0 0 6px rgba(255, 120, 60, 0.8));
+    filter: drop-shadow(0 0 6px rgba(255, 120, 60, 0.85));
+    /* NO CSS transition on d to eliminate curve desync */
   }
   .sun-pearl-bead {
     filter: drop-shadow(0 0 8px #ffffff) drop-shadow(0 0 14px #ff9800);
+    /* NO CSS transition on cx/cy to eliminate dot-path drift */
   }
 
-  /* 3. Wind Velocity: Element Glow on Chevron Vector Arrows */
-  .wind-vector-row {
+  /* 3. Redesigned Dynamic Wind Compass & Flow Section */
+  .wind-dynamic-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+    height: 32px;
+  }
+  /* Mini 360° Compass Dial */
+  .compass-dial {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     background: rgba(255, 255, 255, 0.04);
-    border: var(--glass-border-hairline);
-    border-radius: 12px;
-    padding: 6px 10px;
-    margin-top: 8px;
-  }
-  .vector-arrow-cluster {
+    border: 1px solid rgba(0, 229, 255, 0.3);
     display: flex;
-    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 6px rgba(0, 229, 255, 0.15);
   }
-  .flow-arrow {
-    width: 10px;
-    height: 10px;
-    fill: #00e5ff;
-    /* Glowing vector elements */
-    filter: drop-shadow(0 0 6px #00e5ff);
-    animation: flowPulse 1.8s infinite;
+  .compass-needle {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    transition: transform 0.1s linear;
   }
-  .flow-arrow:nth-child(2) { animation-delay: 0.3s; }
-  .flow-arrow:nth-child(3) { animation-delay: 0.6s; }
-  @keyframes flowPulse {
-    0%, 100% { opacity: 0.3; transform: translateX(0); }
-    50% { opacity: 1; transform: translateX(2px); }
+  .compass-core {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #00e5ff;
+    box-shadow: 0 0 6px #00e5ff;
+    z-index: 2;
+  }
+  /* Animated Wind Velocity Streamlines */
+  .wind-streamlines-svg {
+    flex: 1;
+    height: 28px;
+    overflow: hidden;
+  }
+  .wind-stream-line {
+    stroke-dasharray: 12 18;
+    animation: streamFlow 1.6s linear infinite;
+  }
+  .wind-stream-line:nth-child(2) {
+    stroke-dasharray: 8 14;
+    animation-duration: 1.2s;
+  }
+  .wind-stream-line:nth-child(3) {
+    stroke-dasharray: 15 20;
+    animation-duration: 2.0s;
+  }
+  @keyframes streamFlow {
+    0% { stroke-dashoffset: 60; }
+    100% { stroke-dashoffset: 0; }
   }
 
-  /* 4. Barometer: Element Glow on Wave & Intersection Bead */
+  /* 4. Barometer (Native SVG Geometry) */
   .pressure-wave-svg {
     width: 100%;
-    height: 32px;
-    margin-top: 4px;
+    height: 28px;
+    margin-top: 2px;
     overflow: visible;
   }
   .active-wave-line {
@@ -369,263 +460,911 @@
   }
   .pressure-glow-bead {
     filter: drop-shadow(0 0 8px #ffffff) drop-shadow(0 0 12px #ff4081);
+    /* NO CSS transition on cx/cy to eliminate wave drift */
+  }
+
+  /* ------------------------------------------------------------- */
+  /* VERTICAL 24-HOUR SIMULATION BAR (RIGHT SIDE)                 */
+  /* ------------------------------------------------------------- */
+  .time-control-panel {
+    position: relative;
+    width: 160px;
+    height: 520px;
+    min-height: 520px;
+    max-height: 520px;
+    border-radius: 36px;
+    background: var(--glass-card-bg);
+    backdrop-filter: blur(60px) saturate(210%);
+    -webkit-backdrop-filter: blur(60px) saturate(210%);
+    border: var(--glass-border-hairline);
+    box-shadow: 
+      0 30px 80px rgba(0, 0, 0, 0.8),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  /* Play / Pause / Reset Cluster */
+  .sim-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+  .control-btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    border: var(--glass-border-hairline);
+    color: #fff;
+    padding: 6px 0;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .control-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+  }
+  .control-btn.active {
+    background: #00e5ff;
+    color: #05060a;
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.6);
+  }
+
+  .speed-bar {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+  }
+  .speed-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: var(--glass-border-hairline);
+    color: var(--text-secondary);
+    padding: 4px 0;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+  }
+  .speed-btn.active {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+  }
+
+  /* Vertical Timeline Track Container */
+  .vertical-timeline-container {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    min-height: 280px;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    cursor: pointer;
+    touch-action: none;
+    margin: 4px 0;
+  }
+
+  /* 24-Hour Vertical Track Bar */
+  .timeline-track {
+    position: relative;
+    width: 8px;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(180deg, 
+      #0d1b2a 0%,    /* 00:00 Midnight */
+      #1b263b 20%,   /* 05:00 Night/Dawn */
+      #ff9e00 28%,   /* 07:00 Sunrise */
+      #00b4d8 50%,   /* 12:00 Noon */
+      #ff7b00 75%,   /* 18:00 Sunset */
+      #480ca8 85%,   /* 20:30 Dusk */
+      #0d1b2a 100%   /* 24:00 Midnight */
+    );
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 0 8px rgba(0, 180, 216, 0.2);
+  }
+
+  /* Hour Ticks & Labels along the track */
+  .hour-labels {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 20px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+  .timeline-hour-mark {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .timeline-hour-mark::before {
+    content: "";
+    width: 5px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  /* Interactive Handle / Scrubber Thumb */
+  .timeline-handle {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid #ffffff;
+    backdrop-filter: blur(10px);
+    box-shadow: 
+      0 0 14px rgba(255, 255, 255, 0.9),
+      0 0 25px #00e5ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .handle-inner-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #00e5ff;
+    box-shadow: 0 0 8px #00e5ff;
+  }
+
+  /* Floating Time Tooltip next to handle */
+  .handle-time-tooltip {
+    position: absolute;
+    right: 34px;
+    background: rgba(10, 15, 25, 0.92);
+    border: 1px solid rgba(0, 229, 255, 0.4);
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #00e5ff;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
   }
 </style>
 </head>
 <body>
 
-  <!-- City Presets -->
-  <div class="switch-bar">
-    <button class="switch-btn active" onclick="setCity('surat')">Surat</button>
-    <button class="switch-btn" onclick="setCity('sf')">San Francisco</button>
-    <button class="switch-btn" onclick="setCity('london')">London</button>
-    <button class="switch-btn" onclick="setCity('tokyo')">Tokyo</button>
-  </div>
+  <div class="preview-wrapper">
 
-  <!-- THE MASTER SOLID WIDGET BLOCK -->
-  <div class="master-widget">
-    <div class="glass-glare-strip"></div>
+    <!-- MASTER SOLID WIDGET BLOCK (STRICT LOCKED HEIGHT) -->
+    <div class="master-widget" id="masterWidget">
+      <div class="sky-tint-layer" id="skyTint"></div>
+      <div class="glass-glare-strip"></div>
 
-    <!-- Header Row -->
-    <div class="widget-header">
-      <div class="loc-badge">
-        <svg class="loc-icon" viewBox="0 0 24 24">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
-        </svg>
-        <span class="loc-name" id="cityName">SURAT, GUJARAT</span>
-      </div>
-
-      <div class="live-indicator">
-        <div class="live-dot"></div>
-        <span>LIVE RADAR</span>
-      </div>
-    </div>
-
-    <!-- Hero Weather Row -->
-    <div class="hero-row">
-      <div>
-        <div class="temp-large" id="mainTemp">31°</div>
-        <div class="condition-text" id="mainCondition">Partly Cloudy</div>
-        <div class="hilo-text" id="mainHiLo">H: 34° · L: 26° · Feels like 33°</div>
-      </div>
-
-      <!-- Vector Weather Scene (Pure SVG, NO EMOJIS) -->
-      <div class="hero-vector-scene">
-        <!-- Glowing Radiant Sun Element -->
-        <svg class="sun-body" viewBox="0 0 100 100">
-          <defs>
-            <radialGradient id="sunCore" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#ffffff"/>
-              <stop offset="25%" stop-color="#ffe082"/>
-              <stop offset="60%" stop-color="#ffb300"/>
-              <stop offset="100%" stop-color="#ff6f00"/>
-            </radialGradient>
-          </defs>
-          <circle cx="50" cy="50" r="30" fill="url(#sunCore)"/>
-          <g stroke="#ffb300" stroke-width="4" stroke-linecap="round" opacity="0.9">
-            <line x1="50" y1="6" x2="50" y2="13" />
-            <line x1="50" y1="87" x2="50" y2="94" />
-            <line x1="6" y1="50" x2="13" y2="50" />
-            <line x1="87" y1="50" x2="94" y2="50" />
-            <line x1="19" y1="19" x2="24" y2="24" />
-            <line x1="76" y1="76" x2="81" y2="81" />
-            <line x1="19" y1="81" x2="24" y2="76" />
-            <line x1="76" y1="24" x2="81" y2="19" />
-          </g>
-        </svg>
-
-        <!-- Volumetric Translucent Cloud SVG -->
-        <svg class="cloud-body" viewBox="0 0 120 80">
-          <defs>
-            <linearGradient id="cloudShader" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.98"/>
-              <stop offset="100%" stop-color="#c9d7ec" stop-opacity="0.95"/>
-            </linearGradient>
-          </defs>
-          <path d="M 30 65 A 22 22 0 0 1 25 25 A 32 32 0 0 1 78 18 A 26 26 0 0 1 106 48 A 20 20 0 0 1 95 65 Z" fill="url(#cloudShader)"/>
-        </svg>
-      </div>
-    </div>
-
-    <!-- Hourly Forecast Glass Shelf (Pure SVG, NO EMOJIS) -->
-    <div class="hourly-shelf">
-      <div class="hour-item">
-        <span class="hour-time">Now</span>
-        <svg class="hour-icon" viewBox="0 0 24 24" fill="#ffb300"><circle cx="12" cy="12" r="5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2" stroke="#ffb300" stroke-width="2" stroke-linecap="round"/></svg>
-        <span class="hour-deg">31°</span>
-      </div>
-      <div class="hour-item">
-        <span class="hour-time">1 PM</span>
-        <svg class="hour-icon" viewBox="0 0 24 24" fill="#ffb300"><circle cx="12" cy="12" r="6"/></svg>
-        <span class="hour-deg">33°</span>
-      </div>
-      <div class="hour-item">
-        <span class="hour-time">2 PM</span>
-        <svg class="hour-icon" viewBox="0 0 24 24" fill="#ffa000"><circle cx="12" cy="12" r="6"/></svg>
-        <span class="hour-deg">34°</span>
-      </div>
-      <div class="hour-item">
-        <span class="hour-time">3 PM</span>
-        <svg class="hour-icon" viewBox="0 0 24 24" fill="#ffb300"><circle cx="10" cy="10" r="4"/><path d="M10 16a6 6 0 0 0 8-2 4 4 0 0 0-4-4" fill="#cfd8dc"/></svg>
-        <span class="hour-deg">32°</span>
-      </div>
-      <div class="hour-item">
-        <span class="hour-time">4 PM</span>
-        <svg class="hour-icon" viewBox="0 0 24 24" fill="#b0bec5"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
-        <span class="hour-deg">30°</span>
-      </div>
-      <div class="hour-item">
-        <span class="hour-time">5 PM</span>
-        <svg class="hour-icon" viewBox="0 0 24 24" fill="#b0bec5"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
-        <span class="hour-deg">29°</span>
-      </div>
-    </div>
-
-    <!-- THE 4 INTEGRATED CAPSULE GAUGES (CLEAN BORDERS, GLOWING INTERNAL ELEMENTS) -->
-    <div class="gauges-grid">
-      
-      <!-- GAUGE 1: UV INDEX (Internal Glow on Core Bead) -->
-      <div class="clean-capsule">
-        <div class="capsule-header">
-          <span>UV INDEX</span>
-          <span class="capsule-tag" style="background:rgba(255, 170, 0, 0.15); color:#ffca28;">MOD</span>
+      <!-- Header Row -->
+      <div class="widget-header">
+        <div class="loc-badge">
+          <svg class="loc-icon" viewBox="0 0 24 24">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+          </svg>
+          <span class="loc-name">SURAT, GUJARAT</span>
         </div>
-        <div class="capsule-primary-val" id="uvValue">UVI 5.4</div>
-        <div class="capsule-subtext">Peak 1:30 PM</div>
 
-        <!-- 3D Spectrum Track & Luminous Core Bead -->
-        <div class="uvi-spectrum-capsule">
-          <div class="glass-3d-runner" id="uvRunner">
-            <div class="runner-center-core"></div>
+        <div class="status-cluster">
+          <div class="time-badge" id="simTimeBadge">12:00 PM</div>
+          <div class="sim-tag">
+            <div class="sim-dot"></div>
+            <span>SIMULATED</span>
           </div>
         </div>
       </div>
 
-      <!-- GAUGE 2: SOLAR PARABOLIC ARC (Internal Glow on Arc & Sun Pearl) -->
-      <div class="clean-capsule">
-        <div class="capsule-header">
-          <span>SOLAR PATH</span>
-          <span class="capsule-tag" style="background:rgba(255, 255, 255, 0.1); color:#ffb74d;">18:38</span>
+      <!-- Hero Weather Row -->
+      <div class="hero-row">
+        <div class="hero-left-col">
+          <div class="temp-large" id="mainTemp">31°</div>
+          <div class="condition-text" id="mainCondition">Partly Cloudy</div>
+          <div class="hilo-text" id="mainHiLo">H: 34° · L: 24° · Feels like 33°</div>
         </div>
-        <div class="capsule-primary-val" style="font-size:17px; margin:4px 0 2px;">Sunset 5h 2m</div>
-        <div class="capsule-subtext">Dawn: 06:12 · Dusk: 19:02</div>
 
-        <!-- Parabolic Arc SVG -->
-        <svg class="solar-arc-svg" viewBox="0 0 130 32">
-          <defs>
-            <linearGradient id="solarPathGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#ab47bc" stop-opacity="0.2"/>
-              <stop offset="60%" stop-color="#ff7043" stop-opacity="0.9"/>
-              <stop offset="100%" stop-color="#ffd54f" stop-opacity="1"/>
-            </linearGradient>
-          </defs>
-          <path d="M 5 28 Q 65 2 125 28" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-dasharray="2 2"/>
-          <path class="active-arc-line" d="M 5 28 Q 65 2 92 8" fill="none" stroke="url(#solarPathGrad)" stroke-width="2.5" stroke-linecap="round"/>
-          <circle class="sun-pearl-bead" cx="92" cy="8" r="4.5" fill="#ffffff"/>
-        </svg>
+        <!-- Vector Weather Scene (Pure SVG) -->
+        <div class="hero-vector-scene">
+          <!-- Radiant Sun SVG -->
+          <svg class="sun-body" id="sunElement" viewBox="0 0 100 100">
+            <defs>
+              <radialGradient id="sunCore" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="25%" stop-color="#ffe082"/>
+                <stop offset="60%" stop-color="#ffb300"/>
+                <stop offset="100%" stop-color="#ff6f00"/>
+              </radialGradient>
+            </defs>
+            <circle cx="50" cy="50" r="30" fill="url(#sunCore)"/>
+            <g stroke="#ffb300" stroke-width="4" stroke-linecap="round" opacity="0.9">
+              <line x1="50" y1="6" x2="50" y2="13" />
+              <line x1="50" y1="87" x2="50" y2="94" />
+              <line x1="6" y1="50" x2="13" y2="50" />
+              <line x1="87" y1="50" x2="94" y2="50" />
+              <line x1="19" y1="19" x2="24" y2="24" />
+              <line x1="76" y1="76" x2="81" y2="81" />
+              <line x1="19" y1="81" x2="24" y2="76" />
+              <line x1="76" y1="24" x2="81" y2="19" />
+            </g>
+          </svg>
+
+          <!-- Luminous Crescent Moon SVG (Night Mode) -->
+          <svg class="moon-body" id="moonElement" viewBox="0 0 100 100" style="opacity:0; transform: scale(0.7);">
+            <defs>
+              <radialGradient id="moonGrad" cx="40%" cy="40%" r="60%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="60%" stop-color="#bbdefb"/>
+                <stop offset="100%" stop-color="#90caf9"/>
+              </radialGradient>
+            </defs>
+            <path d="M 60 15 A 35 35 0 1 0 85 68 A 38 38 0 0 1 60 15 Z" fill="url(#moonGrad)"/>
+            <circle cx="35" cy="20" r="1.5" fill="#ffffff" opacity="0.8"/>
+            <circle cx="20" cy="45" r="2" fill="#ffffff" opacity="0.9"/>
+            <circle cx="45" cy="75" r="1.5" fill="#ffffff" opacity="0.7"/>
+          </svg>
+
+          <!-- Volumetric Cloud SVG -->
+          <svg class="cloud-body" id="cloudElement" viewBox="0 0 120 80">
+            <defs>
+              <linearGradient id="cloudShader" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.98"/>
+                <stop offset="100%" stop-color="#c9d7ec" stop-opacity="0.95"/>
+              </linearGradient>
+            </defs>
+            <path d="M 30 65 A 22 22 0 0 1 25 25 A 32 32 0 0 1 78 18 A 26 26 0 0 1 106 48 A 20 20 0 0 1 95 65 Z" fill="url(#cloudShader)"/>
+          </svg>
+        </div>
       </div>
 
-      <!-- GAUGE 3: WIND VECTOR FLOW (Internal Glow on Cyan Arrows) -->
-      <div class="clean-capsule">
-        <div class="capsule-header">
-          <span>WIND SPEED</span>
-          <span class="capsule-tag" style="background:rgba(0, 229, 255, 0.12); color:#80deea;">45° NE</span>
-        </div>
-        <div class="capsule-primary-val" id="windSpeed">14 <span style="font-size:12px; color:var(--text-tertiary);">km/h</span></div>
-        <div class="capsule-subtext">Gusts up to 22 km/h</div>
+      <!-- Hourly Forecast Shelf (Fixed 72px) -->
+      <div class="hourly-shelf" id="hourlyShelf">
+        <!-- Rendered via JS -->
+      </div>
 
-        <!-- Flow Vectors Indicator Bar -->
-        <div class="wind-vector-row">
-          <span style="font-size:9px; color:var(--text-tertiary); font-weight:700;">NEXT 6 HRS</span>
-          <div class="vector-arrow-cluster">
-            <svg class="flow-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke="#00e5ff" stroke-width="3" stroke-linecap="round"/></svg>
-            <svg class="flow-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke="#00e5ff" stroke-width="3" stroke-linecap="round"/></svg>
-            <svg class="flow-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke="#00e5ff" stroke-width="3" stroke-linecap="round"/></svg>
+      <!-- THE 4 INTEGRATED CAPSULE GAUGES (Fixed 120px) -->
+      <div class="gauges-grid">
+        
+        <!-- GAUGE 1: UV INDEX -->
+        <div class="clean-capsule">
+          <div class="capsule-header">
+            <span>UV INDEX</span>
+            <span class="capsule-tag" id="uvTag" style="background:rgba(255, 170, 0, 0.15); color:#ffca28;">MOD</span>
+          </div>
+          <div class="capsule-primary-val" id="uvValue">UVI 5.4</div>
+          <div class="capsule-subtext" id="uvSubtext">Peak 1:30 PM</div>
+
+          <div class="uvi-spectrum-capsule">
+            <div class="glass-3d-runner" id="uvRunner">
+              <div class="runner-center-core"></div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- GAUGE 4: DUAL TENSION PRESSURE WAVE (Internal Glow on Stroke & Dot) -->
-      <div class="clean-capsule">
-        <div class="capsule-header">
-          <span>BAROMETER</span>
-          <span class="capsule-tag" style="background:rgba(255, 64, 129, 0.15); color:#ff80ab;">RISING</span>
+        <!-- GAUGE 2: SOLAR / LUNAR ARC (Guaranteed 1:1 SVG Geometry) -->
+        <div class="clean-capsule">
+          <div class="capsule-header">
+            <span id="solarHeader">SOLAR PATH</span>
+            <span class="capsule-tag" id="solarTag" style="background:rgba(255, 255, 255, 0.1); color:#ffb74d;">18:38</span>
+          </div>
+          <div class="capsule-primary-val" id="solarPrimary" style="font-size:16px;">Sunset in 5h 2m</div>
+          <div class="capsule-subtext" id="solarSubtext">Dawn: 06:12 · Dusk: 19:02</div>
+
+          <svg class="solar-arc-svg" viewBox="0 0 130 28">
+            <defs>
+              <linearGradient id="solarPathGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ab47bc" stop-opacity="0.3"/>
+                <stop offset="50%" stop-color="#ff7043" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ffd54f" stop-opacity="1"/>
+              </linearGradient>
+            </defs>
+            <!-- Background reference curve -->
+            <path id="solarArcBase" d="M 5 24 Q 65 2 125 24" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-dasharray="2 2"/>
+            <!-- Active illuminated curve: exact same 'd', trimmed via strokeDashoffset -->
+            <path class="active-arc-line" id="solarArcActive" d="M 5 24 Q 65 2 125 24" fill="none" stroke="url(#solarPathGrad)" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Sun Pearl: positioned strictly via getPointAtLength() -->
+            <circle class="sun-pearl-bead" id="sunPearl" cx="5" cy="24" r="4.5" fill="#ffffff"/>
+          </svg>
         </div>
-        <div class="capsule-primary-val" id="baroSpeed">1,016 <span style="font-size:12px; color:var(--text-tertiary);">hPa</span></div>
-        <div class="capsule-subtext">Steady High Atmospheric</div>
 
-        <!-- Dual Intersecting Pressure Waves SVG -->
-        <svg class="pressure-wave-svg" viewBox="0 0 130 32">
-          <defs>
-            <linearGradient id="waveLineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#f06292" stop-opacity="0.3"/>
-              <stop offset="100%" stop-color="#ec407a" stroke-opacity="1"/>
-            </linearGradient>
-          </defs>
-          <!-- Lower Ambient Wave -->
-          <path d="M 5 24 Q 40 30 75 18 T 125 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
-          <!-- Primary Rising Wave with element glow -->
-          <path class="active-wave-line" d="M 5 28 Q 45 32 80 16 T 125 6" fill="none" stroke="url(#waveLineGrad)" stroke-width="2.5" stroke-linecap="round"/>
-          <circle class="pressure-glow-bead" cx="108" cy="9" r="4" fill="#ffffff"/>
-        </svg>
+        <!-- GAUGE 3: REDESIGNED WIND COMPASS & VELOCITY FLOW -->
+        <div class="clean-capsule">
+          <div class="capsule-header">
+            <span>WIND</span>
+            <span class="capsule-tag" id="windTag" style="background:rgba(0, 229, 255, 0.12); color:#80deea;">MODERATE</span>
+          </div>
+          <div class="capsule-primary-val" id="windSpeed">14 <span style="font-size:12px; color:var(--text-tertiary);">km/h</span></div>
+          <div class="capsule-subtext" id="windSubtext">Gusts 22 km/h · 45° NE</div>
+
+          <!-- Dynamic Compass + Airflow Streamlines -->
+          <div class="wind-dynamic-row">
+            <!-- Mini Gyro Compass -->
+            <div class="compass-dial" title="Wind Bearing">
+              <svg class="compass-needle" id="compassNeedle" viewBox="0 0 24 24">
+                <!-- North-pointing needle triangle -->
+                <polygon points="12,2 15,12 9,12" fill="#00e5ff" filter="drop-shadow(0 0 4px #00e5ff)"/>
+                <!-- South-pointing base triangle -->
+                <polygon points="12,22 15,12 9,12" fill="rgba(255, 255, 255, 0.25)"/>
+              </svg>
+              <div class="compass-core"></div>
+            </div>
+
+            <!-- Dynamic Velocity Streamlines -->
+            <svg class="wind-streamlines-svg" viewBox="0 0 80 24">
+              <path class="wind-stream-line" d="M 2 6 Q 25 3 45 7 T 78 5" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-linecap="round" opacity="0.85"/>
+              <path class="wind-stream-line" d="M 0 12 Q 22 15 48 10 T 78 13" fill="none" stroke="#80deea" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+              <path class="wind-stream-line" d="M 4 19 Q 30 17 55 21 T 76 18" fill="none" stroke="#4dd0e1" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- GAUGE 4: DUAL TENSION PRESSURE WAVE (Guaranteed 1:1 SVG Geometry) -->
+        <div class="clean-capsule">
+          <div class="capsule-header">
+            <span>BAROMETER</span>
+            <span class="capsule-tag" id="baroTag" style="background:rgba(255, 64, 129, 0.15); color:#ff80ab;">STEADY</span>
+          </div>
+          <div class="capsule-primary-val" id="baroSpeed">1,016 <span style="font-size:12px; color:var(--text-tertiary);">hPa</span></div>
+          <div class="capsule-subtext" id="baroSubtext">Normal Atmospheric</div>
+
+          <svg class="pressure-wave-svg" viewBox="0 0 130 28">
+            <defs>
+              <linearGradient id="waveLineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#f06292" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#ec407a" stroke-opacity="1"/>
+              </linearGradient>
+            </defs>
+            <!-- Ambient reference wave -->
+            <path id="baroWaveBase" d="M 5 22 Q 35 28 65 14 T 125 6" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" stroke-dasharray="2 2"/>
+            <!-- Active wave line: exact same path, trimmed via strokeDashoffset -->
+            <path class="active-wave-line" id="baroWaveActive" d="M 5 22 Q 35 28 65 14 T 125 6" fill="none" stroke="url(#waveLineGrad)" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Bead strictly tracked to path via getPointAtLength() -->
+            <circle class="pressure-glow-bead" id="pressureBead" cx="5" cy="22" r="4" fill="#ffffff"/>
+          </svg>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------- -->
+    <!-- VERTICAL 24-HOUR SIMULATION BAR (RIGHT SIDE)                 -->
+    <!-- ------------------------------------------------------------- */ -->
+    <div class="time-control-panel">
+      <div class="panel-title">24h Timeline</div>
+
+      <!-- Controls -->
+      <div class="sim-controls">
+        <button class="control-btn" id="playBtn" onclick="togglePlay()">
+          <span id="playIcon">▶</span> <span id="playText">Simulate</span>
+        </button>
+        <div class="speed-bar">
+          <button class="speed-btn active" onclick="setSpeed(1, this)">1x</button>
+          <button class="speed-btn" onclick="setSpeed(5, this)">5x</button>
+          <button class="speed-btn" onclick="setSpeed(15, this)">15x</button>
+        </div>
+        <button class="control-btn" style="font-size: 10px; padding: 4px 0;" onclick="resetToNow()">
+          ↺ Reset to Now
+        </button>
       </div>
 
+      <!-- Vertical Interactive Scrubber Track -->
+      <div class="vertical-timeline-container" id="timelineContainer">
+        <div class="timeline-track" id="timelineTrack"></div>
+
+        <!-- Interactive Scrubbing Handle -->
+        <div class="timeline-handle" id="timelineHandle">
+          <div class="handle-inner-dot"></div>
+          <div class="handle-time-tooltip" id="handleTooltip">12:00</div>
+        </div>
+
+        <!-- 24-Hour Markers (00:00 to 24:00) -->
+        <div class="hour-labels">
+          <div class="timeline-hour-mark">00:00</div>
+          <div class="timeline-hour-mark">03:00</div>
+          <div class="timeline-hour-mark">06:00</div>
+          <div class="timeline-hour-mark">09:00</div>
+          <div class="timeline-hour-mark">12:00</div>
+          <div class="timeline-hour-mark">15:00</div>
+          <div class="timeline-hour-mark">18:00</div>
+          <div class="timeline-hour-mark">21:00</div>
+          <div class="timeline-hour-mark">24:00</div>
+        </div>
+      </div>
     </div>
 
   </div>
 
 <script>
-  function setCity(city) {
-    document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
+  /* ------------------------------------------------------------- */
+  /* 24-HOUR DUMMY DATA ENGINE & SIMULATOR                        */
+  /* ------------------------------------------------------------- */
 
-    const cityName = document.getElementById('cityName');
-    const mainTemp = document.getElementById('mainTemp');
-    const mainCond = document.getElementById('mainCondition');
-    const mainHiLo = document.getElementById('mainHiLo');
-    const uvVal = document.getElementById('uvValue');
-    const uvRunner = document.getElementById('uvRunner');
-    const windSpeed = document.getElementById('windSpeed');
-    const baroSpeed = document.getElementById('baroSpeed');
+  // State
+  let currentTime = 12.0; // 0.0 to 24.0 (hours)
+  let isPlaying = false;
+  let simSpeed = 1;
+  let animFrameId = null;
+  let lastTimestamp = null;
 
-    if (city === 'surat') {
-      cityName.textContent = 'SURAT, GUJARAT';
-      mainTemp.textContent = '31°';
-      mainCond.textContent = 'Partly Cloudy';
-      mainHiLo.textContent = 'H: 34° · L: 26° · Feels like 33°';
-      uvVal.textContent = 'UVI 5.4';
-      uvRunner.style.left = '48%';
-      windSpeed.innerHTML = '14 <span style="font-size:12px; color:var(--text-tertiary);">km/h</span>';
-      baroSpeed.innerHTML = '1,016 <span style="font-size:12px; color:var(--text-tertiary);">hPa</span>';
-    } else if (city === 'sf') {
-      cityName.textContent = 'SAN FRANCISCO, CA';
-      mainTemp.textContent = '19°';
-      mainCond.textContent = 'Pacific Fog';
-      mainHiLo.textContent = 'H: 21° · L: 14° · Feels like 18°';
-      uvVal.textContent = 'UVI 2.8';
-      uvRunner.style.left = '25%';
-      windSpeed.innerHTML = '21 <span style="font-size:12px; color:var(--text-tertiary);">km/h</span>';
-      baroSpeed.innerHTML = '1,012 <span style="font-size:12px; color:var(--text-tertiary);">hPa</span>';
-    } else if (city === 'london') {
-      cityName.textContent = 'LONDON, UK';
-      mainTemp.textContent = '14°';
-      mainCond.textContent = 'Light Drizzle';
-      mainHiLo.textContent = 'H: 16° · L: 11° · Feels like 12°';
-      uvVal.textContent = 'UVI 1.2';
-      uvRunner.style.left = '12%';
-      windSpeed.innerHTML = '18 <span style="font-size:12px; color:var(--text-tertiary);">km/h</span>';
-      baroSpeed.innerHTML = '1,008 <span style="font-size:12px; color:var(--text-tertiary);">hPa</span>';
-    } else if (city === 'tokyo') {
-      cityName.textContent = 'TOKYO, JAPAN';
-      mainTemp.textContent = '15°';
-      mainCond.textContent = 'Clear Starlit';
-      mainHiLo.textContent = 'H: 18° · L: 10° · Feels like 14°';
-      uvVal.textContent = 'UVI 0.0';
-      uvRunner.style.left = '2%';
-      windSpeed.innerHTML = '9 <span style="font-size:12px; color:var(--text-tertiary);">km/h</span>';
-      baroSpeed.innerHTML = '1,022 <span style="font-size:12px; color:var(--text-tertiary);">hPa</span>';
+  // Cached SVG Path Elements & Total Lengths
+  let solarBaseEl, solarActiveEl, sunPearlEl, solarLength;
+  let baroBaseEl, baroActiveEl, baroBeadEl, baroLength;
+
+  function initGeometryCache() {
+    solarBaseEl = document.getElementById('solarArcBase');
+    solarActiveEl = document.getElementById('solarArcActive');
+    sunPearlEl = document.getElementById('sunPearl');
+    solarLength = solarBaseEl.getTotalLength();
+
+    baroBaseEl = document.getElementById('baroWaveBase');
+    baroActiveEl = document.getElementById('baroWaveActive');
+    baroBeadEl = document.getElementById('pressureBead');
+    baroLength = baroBaseEl.getTotalLength();
+  }
+
+  // Initialize to Current Real-World Local Time
+  function initCurrentTime() {
+    const now = new Date();
+    currentTime = now.getHours() + (now.getMinutes() / 60) + (now.getSeconds() / 3600);
+    updateAll(currentTime);
+  }
+
+  function formatTime12(h) {
+    let hour = Math.floor(h) % 24;
+    let min = Math.floor((h % 1) * 60);
+    let ampm = hour >= 12 ? 'PM' : 'AM';
+    let dispHour = hour % 12;
+    if (dispHour === 0) dispHour = 12;
+    let dispMin = min < 10 ? '0' + min : min;
+    return `${dispHour}:${dispMin} ${ampm}`;
+  }
+
+  function formatTime24(h) {
+    let hour = Math.floor(h) % 24;
+    let min = Math.floor((h % 1) * 60);
+    let dispHour = hour < 10 ? '0' + hour : hour;
+    let dispMin = min < 10 ? '0' + min : min;
+    return `${dispHour}:${dispMin}`;
+  }
+
+  /* ------------------------------------------------------------- */
+  /* MATHEMATICAL DUMMY GENERATORS (PURE SYNTHETIC 24H CURVES)     */
+  /* ------------------------------------------------------------- */
+
+  function getDummyTemp(h) {
+    const rad = ((h - 8.5) / 24) * 2 * Math.PI;
+    const temp = 29 + 5 * Math.sin(rad);
+    return Math.round(temp);
+  }
+
+  function getDummyCondition(h) {
+    if (h >= 0 && h < 5.5) {
+      return { cond: "Clear Starlit", isDay: false, tint: "rgba(5, 10, 25, 0.45)" };
+    } else if (h >= 5.5 && h < 7.0) {
+      return { cond: "Golden Dawn", isDay: true, tint: "rgba(255, 110, 30, 0.18)" };
+    } else if (h >= 7.0 && h < 11.5) {
+      return { cond: "Crisp Sunshine", isDay: true, tint: "rgba(0, 180, 255, 0.08)" };
+    } else if (h >= 11.5 && h < 16.5) {
+      return { cond: "Partly Cloudy", isDay: true, tint: "rgba(0, 140, 255, 0.05)" };
+    } else if (h >= 16.5 && h < 18.75) {
+      return { cond: "Amber Golden Hour", isDay: true, tint: "rgba(255, 130, 0, 0.2)" };
+    } else if (h >= 18.75 && h < 20.5) {
+      return { cond: "Twilight Dusk", isDay: false, tint: "rgba(120, 30, 160, 0.28)" };
+    } else {
+      return { cond: "Calm Night", isDay: false, tint: "rgba(5, 10, 25, 0.45)" };
     }
   }
+
+  function getDummyUV(h) {
+    if (h < 6.5 || h > 18.5) return 0.0;
+    const rad = ((h - 6.5) / 12) * Math.PI;
+    return +(8.5 * Math.sin(rad)).toFixed(1);
+  }
+
+  // Dynamic Wind with Bearing Angle
+  function getDummyWind(h) {
+    const rad = ((h - 6) / 24) * 2 * Math.PI;
+    const speed = Math.round(15 + 7 * Math.sin(rad));
+    const gust = speed + 8;
+    // Compass angle rotates through 360 degrees smoothly across the day
+    const deg = Math.round((h / 24) * 360 + 45) % 360;
+    
+    // Cardinal direction
+    const cardinals = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+    const cardIdx = Math.round(deg / 22.5) % 16;
+    const cardinal = cardinals[cardIdx];
+
+    return { speed, gust, deg, cardinal };
+  }
+
+  function getDummyBarometer(h) {
+    const rad = (h / 12) * 2 * Math.PI;
+    const baro = Math.round(1015 + 3 * Math.cos(rad));
+    return baro;
+  }
+
+  /* ------------------------------------------------------------- */
+  /* UPDATE UI FROM SIMULATED TIME                                 */
+  /* ------------------------------------------------------------- */
+
+  function updateAll(h) {
+    // 1. Time Badges
+    document.getElementById('simTimeBadge').textContent = formatTime12(h);
+    document.getElementById('handleTooltip').textContent = formatTime24(h);
+
+    // 2. Position Scrubber Handle on Vertical Track
+    const handle = document.getElementById('timelineHandle');
+    const pct = (h / 24) * 100;
+    handle.style.top = `${pct}%`;
+
+    // 3. Sky condition, Tint & Vector scene (Sun vs Moon)
+    const { cond, isDay, tint } = getDummyCondition(h);
+    document.getElementById('skyTint').style.background = tint;
+    document.getElementById('mainCondition').textContent = cond;
+
+    const sunEl = document.getElementById('sunElement');
+    const moonEl = document.getElementById('moonElement');
+
+    if (isDay) {
+      sunEl.style.opacity = '1';
+      sunEl.style.transform = 'scale(1)';
+      moonEl.style.opacity = '0';
+      moonEl.style.transform = 'scale(0.7)';
+    } else {
+      sunEl.style.opacity = '0';
+      sunEl.style.transform = 'scale(0.7)';
+      moonEl.style.opacity = '1';
+      moonEl.style.transform = 'scale(1)';
+    }
+
+    // 4. Hero Temp & Hi/Lo
+    const temp = getDummyTemp(h);
+    document.getElementById('mainTemp').textContent = `${temp}°`;
+    const feelsLike = isDay ? temp + 2 : temp - 1;
+    document.getElementById('mainHiLo').textContent = `H: 34° · L: 24° · Feels like ${feelsLike}°`;
+
+    // 5. Hourly Forecast Shelf (Next 6 hours from simulated hour)
+    renderHourlyShelf(h);
+
+    // 6. Capsule 1: UV Index
+    const uv = getDummyUV(h);
+    document.getElementById('uvValue').textContent = `UVI ${uv.toFixed(1)}`;
+    const uvRunner = document.getElementById('uvRunner');
+    const uvPercent = Math.min(94, Math.max(2, (uv / 10) * 100));
+    uvRunner.style.left = `${uvPercent}%`;
+
+    const uvTag = document.getElementById('uvTag');
+    if (uv <= 0.5) {
+      uvTag.textContent = 'ZERO';
+      uvTag.style.background = 'rgba(255,255,255,0.1)';
+      uvTag.style.color = '#90caf9';
+    } else if (uv < 3) {
+      uvTag.textContent = 'LOW';
+      uvTag.style.background = 'rgba(48, 209, 88, 0.15)';
+      uvTag.style.color = '#30d158';
+    } else if (uv < 6) {
+      uvTag.textContent = 'MOD';
+      uvTag.style.background = 'rgba(255, 170, 0, 0.15)';
+      uvTag.style.color = '#ffca28';
+    } else if (uv < 8) {
+      uvTag.textContent = 'HIGH';
+      uvTag.style.background = 'rgba(255, 110, 0, 0.2)';
+      uvTag.style.color = '#ff9800';
+    } else {
+      uvTag.textContent = 'EXTREME';
+      uvTag.style.background = 'rgba(255, 69, 58, 0.25)';
+      uvTag.style.color = '#ff453a';
+    }
+
+    // 7. Capsule 2: Solar / Lunar Arc (Guaranteed 1:1 SVG Geometry)
+    updateSolarArc(h);
+
+    // 8. Capsule 3: Redesigned Wind Compass & Streamlines
+    updateWindSection(h);
+
+    // 9. Capsule 4: Barometer Wave (Guaranteed 1:1 SVG Geometry)
+    updateBarometerSection(h);
+  }
+
+  /* ------------------------------------------------------------- */
+  /* SOLAR / LUNAR ARC (EXACT SVG PATH SAMPLING)                  */
+  /* ------------------------------------------------------------- */
+  function updateSolarArc(h) {
+    const sunrise = 6.2; // 06:12
+    const sunset = 19.03; // 19:02
+    const solarHeader = document.getElementById('solarHeader');
+    const solarTag = document.getElementById('solarTag');
+    const solarPrimary = document.getElementById('solarPrimary');
+    const solarSubtext = document.getElementById('solarSubtext');
+
+    let progress = 0;
+
+    if (h >= sunrise && h <= sunset) {
+      // Daylight Solar Arc
+      solarHeader.textContent = "SOLAR PATH";
+      solarTag.textContent = "18:38";
+      solarTag.style.color = "#ffb74d";
+
+      progress = (h - sunrise) / (sunset - sunrise);
+      const hoursLeft = Math.max(0, (sunset - h));
+      const hLeft = Math.floor(hoursLeft);
+      const mLeft = Math.floor((hoursLeft % 1) * 60);
+      solarPrimary.textContent = `Sunset in ${hLeft}h ${mLeft}m`;
+      solarSubtext.textContent = "Dawn: 06:12 · Dusk: 19:02";
+
+      sunPearlEl.setAttribute('fill', '#ffffff');
+    } else {
+      // Night Lunar Phase
+      solarHeader.textContent = "LUNAR PATH";
+      solarTag.textContent = "06:12";
+      solarTag.style.color = "#90caf9";
+
+      if (h > sunset) {
+        progress = (h - sunset) / (24 - sunset + sunrise);
+      } else {
+        progress = (h + (24 - sunset)) / (24 - sunset + sunrise);
+      }
+
+      const hoursToDawn = h < sunrise ? (sunrise - h) : (24 - h + sunrise);
+      const hLeft = Math.floor(hoursToDawn);
+      const mLeft = Math.floor((hoursToDawn % 1) * 60);
+      solarPrimary.textContent = `Dawn in ${hLeft}h ${mLeft}m`;
+      solarSubtext.textContent = "Moonset: 05:48 · Gibbous";
+
+      sunPearlEl.setAttribute('fill', '#90caf9');
+    }
+
+    progress = Math.max(0, Math.min(1, progress));
+
+    // Exact SVG strokeDashoffset and pointAtLength
+    const currentLen = solarLength * progress;
+    solarActiveEl.style.strokeDasharray = solarLength;
+    solarActiveEl.style.strokeDashoffset = solarLength * (1 - progress);
+
+    const pt = solarBaseEl.getPointAtLength(currentLen);
+    sunPearlEl.setAttribute('cx', pt.x);
+    sunPearlEl.setAttribute('cy', pt.y);
+  }
+
+  /* ------------------------------------------------------------- */
+  /* REDESIGNED WIND COMPASS & STREAMLINES                         */
+  /* ------------------------------------------------------------- */
+  function updateWindSection(h) {
+    const { speed, gust, deg, cardinal } = getDummyWind(h);
+
+    document.getElementById('windSpeed').innerHTML = `${speed} <span style="font-size:12px; color:var(--text-tertiary);">km/h</span>`;
+    document.getElementById('windSubtext').textContent = `Gusts ${gust} km/h · ${deg}° ${cardinal}`;
+
+    // Rotate Compass Needle directly to bearing angle
+    const needle = document.getElementById('compassNeedle');
+    needle.style.transform = `rotate(${deg}deg)`;
+
+    // Wind Beaufort Classification
+    const windTag = document.getElementById('windTag');
+    if (speed < 12) {
+      windTag.textContent = 'GENTLE';
+      windTag.style.background = 'rgba(48, 209, 88, 0.15)';
+      windTag.style.color = '#30d158';
+    } else if (speed < 20) {
+      windTag.textContent = 'MODERATE';
+      windTag.style.background = 'rgba(0, 229, 255, 0.12)';
+      windTag.style.color = '#80deea';
+    } else {
+      windTag.textContent = 'BREEZY';
+      windTag.style.background = 'rgba(255, 170, 0, 0.15)';
+      windTag.style.color = '#ffca28';
+    }
+
+    // Dynamically adjust streamline animation duration based on speed
+    // 8 km/h = 2.4s (slow, calm), 22 km/h = 0.8s (fast, windy)
+    const streamDuration = Math.max(0.6, 3.2 - (speed / 10));
+    document.querySelectorAll('.wind-stream-line').forEach(line => {
+      line.style.animationDuration = `${streamDuration}s`;
+    });
+  }
+
+  /* ------------------------------------------------------------- */
+  /* BAROMETER WAVE (EXACT SVG PATH SAMPLING)                      */
+  /* ------------------------------------------------------------- */
+  function updateBarometerSection(h) {
+    const baro = getDummyBarometer(h);
+    document.getElementById('baroSpeed').innerHTML = `${baro.toLocaleString()} <span style="font-size:12px; color:var(--text-tertiary);">hPa</span>`;
+
+    const baroTag = document.getElementById('baroTag');
+    if (baro > 1016) {
+      baroTag.textContent = 'HIGH';
+      baroTag.style.background = 'rgba(48, 209, 88, 0.15)';
+      baroTag.style.color = '#30d158';
+    } else if (baro < 1013) {
+      baroTag.textContent = 'FALLING';
+      baroTag.style.background = 'rgba(255, 69, 58, 0.15)';
+      baroTag.style.color = '#ff453a';
+    } else {
+      baroTag.textContent = 'STEADY';
+      baroTag.style.background = 'rgba(255, 64, 129, 0.15)';
+      baroTag.style.color = '#ff80ab';
+    }
+
+    // Progress from 0 to 1 across the 24 hour day
+    const progress = Math.max(0, Math.min(1, h / 24));
+    const currentLen = baroLength * progress;
+
+    baroActiveEl.style.strokeDasharray = baroLength;
+    baroActiveEl.style.strokeDashoffset = baroLength * (1 - progress);
+
+    const pt = baroBaseEl.getPointAtLength(currentLen);
+    baroBeadEl.setAttribute('cx', pt.x);
+    baroBeadEl.setAttribute('cy', pt.y);
+  }
+
+  /* ------------------------------------------------------------- */
+  /* HOURLY SHELF GENERATOR                                        */
+  /* ------------------------------------------------------------- */
+  function renderHourlyShelf(currentH) {
+    const shelf = document.getElementById('hourlyShelf');
+    let html = '';
+    const baseHour = Math.floor(currentH);
+
+    for (let i = 0; i < 6; i++) {
+      const forecastH = (baseHour + i) % 24;
+      const temp = getDummyTemp(forecastH);
+      const { isDay } = getDummyCondition(forecastH);
+
+      let timeLabel = i === 0 ? "Now" : formatHourOnly(forecastH);
+
+      let iconSvg = '';
+      if (isDay) {
+        if (forecastH >= 11 && forecastH <= 15) {
+          iconSvg = `<svg class="hour-icon" viewBox="0 0 24 24" fill="#ffa000"><circle cx="12" cy="12" r="6"/></svg>`;
+        } else {
+          iconSvg = `<svg class="hour-icon" viewBox="0 0 24 24" fill="#ffb300"><circle cx="10" cy="10" r="4"/><path d="M10 16a6 6 0 0 0 8-2 4 4 0 0 0-4-4" fill="#cfd8dc"/></svg>`;
+        }
+      } else {
+        iconSvg = `<svg class="hour-icon" viewBox="0 0 24 24" fill="#90caf9"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>`;
+      }
+
+      html += `
+        <div class="hour-item">
+          <span class="hour-time">${timeLabel}</span>
+          ${iconSvg}
+          <span class="hour-deg">${temp}°</span>
+        </div>
+      `;
+    }
+    shelf.innerHTML = html;
+  }
+
+  function formatHourOnly(h) {
+    let hour = h % 24;
+    let ampm = hour >= 12 ? 'PM' : 'AM';
+    let dispHour = hour % 12;
+    if (dispHour === 0) dispHour = 12;
+    return `${dispHour} ${ampm}`;
+  }
+
+  /* ------------------------------------------------------------- */
+  /* INTERACTIVE VERTICAL SCRUBBER                                 */
+  /* ------------------------------------------------------------- */
+  const timelineContainer = document.getElementById('timelineContainer');
+  let isDragging = false;
+
+  function updateScrubberFromPointer(e) {
+    const rect = timelineContainer.getBoundingClientRect();
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    let offsetY = clientY - rect.top;
+    offsetY = Math.max(0, Math.min(rect.height, offsetY));
+    const newTime = (offsetY / rect.height) * 24;
+    currentTime = newTime;
+    updateAll(currentTime);
+  }
+
+  timelineContainer.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    if (isPlaying) togglePlay();
+    updateScrubberFromPointer(e);
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    updateScrubberFromPointer(e);
+  });
+
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+
+  timelineContainer.addEventListener('touchstart', (e) => {
+    isDragging = true;
+    if (isPlaying) togglePlay();
+    updateScrubberFromPointer(e);
+  }, { passive: false });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    updateScrubberFromPointer(e);
+  }, { passive: false });
+
+  window.addEventListener('touchend', () => {
+    isDragging = false;
+  });
+
+  /* ------------------------------------------------------------- */
+  /* SIMULATION ANIMATION LOOP                                     */
+  /* ------------------------------------------------------------- */
+  function togglePlay() {
+    isPlaying = !isPlaying;
+    const playBtn = document.getElementById('playBtn');
+    const playIcon = document.getElementById('playIcon');
+    const playText = document.getElementById('playText');
+
+    if (isPlaying) {
+      playBtn.classList.add('active');
+      playIcon.textContent = '⏸';
+      playText.textContent = 'Pause';
+      lastTimestamp = performance.now();
+      animFrameId = requestAnimationFrame(simulationLoop);
+    } else {
+      playBtn.classList.remove('active');
+      playIcon.textContent = '▶';
+      playText.textContent = 'Simulate';
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+    }
+  }
+
+  function setSpeed(speed, btn) {
+    simSpeed = speed;
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function resetToNow() {
+    if (isPlaying) togglePlay();
+    initCurrentTime();
+  }
+
+  function simulationLoop(timestamp) {
+    if (!isPlaying) return;
+    const dt = (timestamp - lastTimestamp) / 1000;
+    lastTimestamp = timestamp;
+
+    const hourDelta = (24 / 16) * simSpeed * dt;
+    currentTime = (currentTime + hourDelta) % 24;
+
+    updateAll(currentTime);
+    animFrameId = requestAnimationFrame(simulationLoop);
+  }
+
+  // Initialize on load
+  window.addEventListener('DOMContentLoaded', () => {
+    initGeometryCache();
+    initCurrentTime();
+  });
 </script>
 </body>
 </html>
