@@ -23,6 +23,7 @@ The primary goal of WidgetCraft is to offer a foundation of high-quality widgets
 
 WidgetCraft is open source. You can run the native macOS widget dashboard directly:
 - Build and run WidgetCraftApp to experience live Apple WeatherKit integration, liquid glass styling, and multi-size widget layouts for your location.
+- Weather subsystem features full support for live GPS location and Apple WeatherKit telemetry.
 
 ---
 *Designed with precision for iOS.*
