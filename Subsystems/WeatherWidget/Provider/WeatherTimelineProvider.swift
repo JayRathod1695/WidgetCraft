@@ -12,6 +12,14 @@ public struct WeatherEntry: TimelineEntry {
     }
 }
 
+// Helper wrapper to safely send WidgetKit completion closure across Swift 6 tasks
+private struct SendableCompletion<T>: @unchecked Sendable {
+    let handler: (T) -> Void
+    init(_ handler: @escaping (T) -> Void) {
+        self.handler = handler
+    }
+}
+
 // MARK: - Timeline Provider
 public struct WeatherTimelineProvider: TimelineProvider {
     public typealias Entry = WeatherEntry
@@ -36,16 +44,13 @@ public struct WeatherTimelineProvider: TimelineProvider {
         print("[WeatherWidget][DEBUG] getTimeline requested at \(currentDate). Calculating refresh schedule.")
         #endif
         
-        let entry = WeatherEntry(date: currentDate, weather: .previewData)
-        
-        // Refresh every 1 hour to respect WidgetKit reload policy & preserve battery
-        let nextUpdate = Calendar.current.date(byAdding: .hour, value: 1, to: currentDate) ?? currentDate.addingTimeInterval(3600)
-        
-        #if DEBUG
-        print("[WeatherWidget][DEBUG] Scheduled next timeline update for \(nextUpdate)")
-        #endif
-        
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-        completion(timeline)
+        let sendableCallback = SendableCompletion(completion)
+        Task {
+            let liveData = await WeatherService.shared.fetchLiveWeather()
+            let nextUpdate = Calendar.current.date(byAdding: .hour, value: 1, to: currentDate) ?? currentDate.addingTimeInterval(3600)
+            let entry = WeatherEntry(date: currentDate, weather: liveData)
+            let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
+            sendableCallback.handler(timeline)
+        }
     }
 }

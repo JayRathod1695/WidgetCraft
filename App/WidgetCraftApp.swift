@@ -2,6 +2,7 @@ import SwiftUI
 import WidgetKit
 import WeatherWidgetSubsystem
 import Global
+import CoreLocation
 
 @main
 struct WidgetCraftApp: App {
@@ -13,7 +14,7 @@ struct WidgetCraftApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
-        .defaultSize(width: 580, height: 500)
+        .defaultSize(width: 760, height: 700)
     }
 }
 
@@ -24,135 +25,117 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-struct CityCoordinate: Identifiable, Hashable {
-    let id = UUID()
-    let name: String
-    let lat: Double
-    let lon: Double
-}
-
 struct LiveWidgetDashboardView: View {
+    @StateObject private var locationService = LocationService.shared
     @State private var weatherData: WeatherData = .previewData
     @State private var isLoading: Bool = false
-    @State private var selectedCity: CityCoordinate = CityCoordinate(name: "Surat", lat: 21.1981, lon: 72.8298)
-    @State private var previewFamily: PreviewFamily = .medium
-    @State private var statusMessage: String = "Live Data Connected"
+    @State private var previewFamily: PreviewFamily = .large
     
     enum PreviewFamily: String, CaseIterable {
+        case large = "Master Widget (Large)"
         case medium = "Desktop Medium"
         case small = "Desktop Small"
     }
     
-    let cities = [
-        CityCoordinate(name: "Surat", lat: 21.1981, lon: 72.8298),
-        CityCoordinate(name: "Mumbai", lat: 19.0760, lon: 72.8777),
-        CityCoordinate(name: "Delhi", lat: 28.6139, lon: 77.2090),
-        CityCoordinate(name: "San Francisco", lat: 37.7749, lon: -122.4194),
-        CityCoordinate(name: "London", lat: 51.5074, lon: -0.1278),
-        CityCoordinate(name: "Tokyo", lat: 35.6762, lon: 139.6503)
-    ]
-    
     var body: some View {
         ZStack {
-            // macOS Visual Effect blurred background
-            LinearGradient(
-                colors: [
-                    Color(nsColor: .windowBackgroundColor).opacity(0.85),
-                    Color(nsColor: .underPageBackgroundColor).opacity(0.95)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+            // Dark Radial Glassmorphism Background
+            RadialGradient(
+                colors: [Color(red: 0.07, green: 0.10, blue: 0.16), Color(red: 0.03, green: 0.04, blue: 0.06)],
+                center: .top,
+                startRadius: 50,
+                endRadius: 600
             )
             .ignoresSafeArea()
             
             VStack(spacing: 20) {
-                // Top Bar
+                // Top Control Bar: Focused purely on user's city
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 8) {
                             Text("WidgetCraft")
                                 .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
                             
                             HStack(spacing: 4) {
                                 Circle()
                                     .fill(isLoading ? Color.orange : Color.green)
                                     .frame(width: 8, height: 8)
-                                Text(isLoading ? "Updating..." : "LIVE")
+                                Text(isLoading ? "Fetching Live..." : "LIVE")
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundStyle(isLoading ? .orange : .green)
                             }
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
                             .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 1))
                         }
                         
-                        Text("Interactive macOS Widget Preview & Live Engine")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                        Text(locationService.cityName)
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.cyan)
                     }
                     
                     Spacer()
                     
-                    // City Picker
-                    Picker("", selection: $selectedCity) {
-                        ForEach(cities) { city in
-                            Text(city.name).tag(city)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 140)
-                    .onChange(of: selectedCity) { _, newCity in
-                        Task { await loadLiveWeather(for: newCity) }
-                    }
-                    
                     // Refresh Button
                     Button {
-                        Task { await loadLiveWeather(for: selectedCity) }
+                        Task { await refreshWeather() }
                     } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 13, weight: .semibold))
+                        HStack(spacing: 5) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("Refresh")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .buttonStyle(.bordered)
                     .disabled(isLoading)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
+                .padding(.horizontal, 28)
+                .padding(.top, 22)
                 
-                // Widget Family Segmented Control
+                // Widget Family Selector
                 Picker("Size", selection: $previewFamily) {
                     ForEach(PreviewFamily.allCases, id: \.self) { fam in
                         Text(fam.rawValue).tag(fam)
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 240)
+                .frame(width: 380)
                 
                 Spacer(minLength: 10)
                 
-                // Live Widget Display Area
-                VStack {
-                    if previewFamily == .medium {
+                // Widget Display Container
+                Group {
+                    switch previewFamily {
+                    case .large:
+                        WeatherWidgetView(entry: WeatherEntry(date: Date(), weather: weatherData), family: .systemLarge)
+                            .frame(width: 660, height: 460)
+                            .clipShape(RoundedRectangle(cornerRadius: 38, style: .continuous))
+                            .shadow(color: .black.opacity(0.6), radius: 30, x: 0, y: 15)
+                    case .medium:
                         WeatherWidgetView(entry: WeatherEntry(date: Date(), weather: weatherData), family: .systemMedium)
                             .frame(width: 340, height: 160)
                             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                            .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 10)
-                    } else {
+                            .shadow(color: .black.opacity(0.4), radius: 20, x: 0, y: 10)
+                    case .small:
                         WeatherWidgetView(entry: WeatherEntry(date: Date(), weather: weatherData), family: .systemSmall)
                             .frame(width: 160, height: 160)
                             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                            .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 10)
+                            .shadow(color: .black.opacity(0.4), radius: 20, x: 0, y: 10)
                     }
                 }
-                .frame(height: 200)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: previewFamily)
                 
                 Spacer(minLength: 10)
                 
                 // Footer Status
                 HStack {
-                    Text("📍 \(weatherData.cityName): \(weatherData.currentTemperature)°C | \(weatherData.condition.rawValue) | H:\(weatherData.highTemperature)° L:\(weatherData.lowTemperature)°")
+                    Text("📍 \(weatherData.cityName): \(weatherData.currentTemperature)°C · \(weatherData.condition.rawValue) · UV \(String(format: "%.1f", weatherData.uvIndex)) · \(weatherData.wind.speedKmh) km/h \(weatherData.wind.cardinalDirection) · \(weatherData.pressureHpa) hPa")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                     
                     Spacer()
                     
@@ -160,34 +143,46 @@ struct LiveWidgetDashboardView: View {
                         .font(.system(size: 10))
                         .foregroundStyle(.tertiary)
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 28)
                 .padding(.bottom, 16)
             }
         }
+        .onReceive(locationService.$currentLocation) { newLoc in
+            if let loc = newLoc {
+                Task {
+                    await loadWeather(
+                        for: locationService.cityName,
+                        lat: loc.coordinate.latitude,
+                        lon: loc.coordinate.longitude
+                    )
+                }
+            }
+        }
         .task {
-            await loadLiveWeather(for: selectedCity)
+            locationService.requestCurrentLocation()
+            await refreshWeather()
         }
     }
     
-    private func loadLiveWeather(for city: CityCoordinate) async {
-        isLoading = true
-        statusMessage = "Fetching live weather for \(city.name)..."
-        do {
-            let data = try await WeatherService.shared.fetchLiveWeather(
-                cityName: city.name,
-                latitude: city.lat,
-                longitude: city.lon
+    private func refreshWeather() async {
+        if let loc = locationService.currentLocation {
+            await loadWeather(
+                for: locationService.cityName,
+                lat: loc.coordinate.latitude,
+                lon: loc.coordinate.longitude
             )
-            await MainActor.run {
-                self.weatherData = data
-                self.isLoading = false
-                self.statusMessage = "Connected to Live Data"
-            }
-        } catch {
-            await MainActor.run {
-                self.isLoading = false
-                self.statusMessage = "Failed: \(error.localizedDescription)"
-            }
+        } else {
+            // Default to user's city Surat, Gujarat
+            await loadWeather(for: "SURAT, GUJARAT", lat: 21.1981, lon: 72.8298)
+        }
+    }
+    
+    private func loadWeather(for city: String, lat: Double, lon: Double) async {
+        isLoading = true
+        let data = await WeatherService.shared.fetchLiveWeather(cityName: city, latitude: lat, longitude: lon)
+        await MainActor.run {
+            self.weatherData = data
+            self.isLoading = false
         }
     }
 }

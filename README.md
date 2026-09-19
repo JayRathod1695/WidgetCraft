@@ -19,10 +19,10 @@ The primary goal of WidgetCraft is to offer a foundation of high-quality widgets
 - **Customization:** Tweak colors, themes, and data sources for each widget.
 - **Premium Tiers:** A foundation of free widgets with an option to unlock advanced, data-rich widgets.
 
-## Development & Interactive Demo
+## Development & Native App
 
-WidgetCraft is open source. You can test and inspect widgets directly using the built-in 24-hour timeline simulator:
-- Open `preview/index.html` in any browser to simulate full diurnal cycles, liquid glass transitions, and live vector gauges.
+WidgetCraft is open source. You can run the native macOS widget dashboard directly:
+- Build and run WidgetCraftApp to experience live Apple WeatherKit integration, liquid glass styling, and multi-size widget layouts for your location.
 
 ---
 *Designed with precision for iOS.*

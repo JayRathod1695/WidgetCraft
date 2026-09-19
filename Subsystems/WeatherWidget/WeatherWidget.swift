@@ -11,7 +11,7 @@ public struct WeatherWidget: Widget {
             WeatherWidgetView(entry: entry)
         }
         .configurationDisplayName("Glance Weather")
-        .description("Clean, glanceable weather overview with hourly forecast.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .description("Clean, glanceable weather overview with hourly forecast and environmental telemetry.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge])
     }
 }
